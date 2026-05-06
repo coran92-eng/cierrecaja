@@ -1,17 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { format } from 'date-fns'
+import { format, addDays, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
-
-// Determina el turno actual según la hora del día
-function getTurnoActual() {
-  const hora = new Date().getHours()
-  return hora < 16 ? 'manana' : 'tarde'
-}
-
-// Obtiene la fecha de hoy en formato 'YYYY-MM-DD'
-function getFechaHoy() {
-  return format(new Date(), 'yyyy-MM-dd')
-}
 
 // Crea un nuevo registro de apertura con estado 'pendiente'
 export async function crearApertura({
@@ -59,20 +48,19 @@ export async function confirmarApertura({ id, desglose, totalContado, diferencia
   return data
 }
 
-// Busca el fondo del turno anterior para heredarlo
-// Si turno actual es 'manana' → busca 'tarde' del día anterior
-// Si turno actual es 'tarde'  → busca 'manana' del mismo día
+// Busca el fondo del turno anterior para heredarlo.
+// Usa la misma lógica que useTurno: el turno anterior es el que precedió
+// al turno activo (turnoActual/fechaHoy) según la secuencia manana→tarde→manana(+1día).
 export async function obtenerFondoAnterior(turnoActual, fechaHoy) {
   let turnoAnterior
   let fechaBusqueda
 
   if (turnoActual === 'manana') {
+    // El turno que cierra antes de una mañana es la tarde del día anterior
     turnoAnterior = 'tarde'
-    // Día anterior
-    const ayer = new Date(fechaHoy)
-    ayer.setDate(ayer.getDate() - 1)
-    fechaBusqueda = format(ayer, 'yyyy-MM-dd')
+    fechaBusqueda = format(addDays(parseISO(fechaHoy), -1), 'yyyy-MM-dd')
   } else {
+    // El turno que cierra antes de una tarde es la mañana del mismo día
     turnoAnterior = 'manana'
     fechaBusqueda = fechaHoy
   }
@@ -100,24 +88,66 @@ export async function obtenerFondoAnterior(turnoActual, fechaHoy) {
   }
 }
 
-// Hook principal: gestiona el registro del turno actual
+// Hook principal: gestiona el registro del turno activo.
+// El turno activo se determina a partir del último registro en la BD:
+//   - Sin registros → primer turno: manana, fecha hoy
+//   - Último cerrado + turno manana → siguiente: tarde, misma fecha
+//   - Último cerrado + turno tarde  → siguiente: manana, día siguiente
+//   - Último en otro estado (apertura_ok, pendiente, reabierto) → ese mismo registro es el activo
 export function useTurno() {
   const [registro, setRegistro] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  const turnoActual = getTurnoActual()
-  const fechaHoy = getFechaHoy()
+  const [turnoActual, setTurnoActual] = useState(null)
+  const [fechaHoy, setFechaHoy] = useState(null)
 
   const fetchRegistro = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
+      // 1. Buscar el último registro (cualquier turno, cualquier fecha)
+      const { data: ultimoRegistro, error: errorUltimo } = await supabase
+        .from('turnos_registros')
+        .select('*')
+        .order('fecha', { ascending: false })
+        .order('turno', { ascending: false }) // 'tarde' > 'manana' alfabéticamente
+        .limit(1)
+        .maybeSingle()
+
+      if (errorUltimo) throw errorUltimo
+
+      // 2. Determinar el turno/fecha activo basado en el último registro
+      let turno, fecha
+
+      if (!ultimoRegistro) {
+        // Sin historial → primer turno
+        turno = 'manana'
+        fecha = format(new Date(), 'yyyy-MM-dd')
+      } else if (ultimoRegistro.estado === 'cerrado') {
+        // Último cerrado → calcular el siguiente turno
+        if (ultimoRegistro.turno === 'manana') {
+          turno = 'tarde'
+          fecha = ultimoRegistro.fecha // mismo día
+        } else {
+          // turno === 'tarde' → siguiente es manana del día siguiente
+          turno = 'manana'
+          fecha = format(addDays(parseISO(ultimoRegistro.fecha), 1), 'yyyy-MM-dd')
+        }
+      } else {
+        // apertura_ok, pendiente, reabierto → el turno activo ES ese registro
+        turno = ultimoRegistro.turno
+        fecha = ultimoRegistro.fecha
+      }
+
+      setTurnoActual(turno)
+      setFechaHoy(fecha)
+
+      // 3. Buscar el registro para ese turno/fecha activo
       const { data, error: supabaseError } = await supabase
         .from('turnos_registros')
         .select('*')
-        .eq('turno', turnoActual)
-        .eq('fecha', fechaHoy)
+        .eq('turno', turno)
+        .eq('fecha', fecha)
         .maybeSingle()
 
       if (supabaseError) throw supabaseError
@@ -128,7 +158,7 @@ export function useTurno() {
     } finally {
       setLoading(false)
     }
-  }, [turnoActual, fechaHoy])
+  }, [])
 
   useEffect(() => {
     fetchRegistro()
