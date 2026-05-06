@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore'
-import { useTurno, crearApertura, confirmarApertura, obtenerFondoAnterior } from '../../hooks/useTurno'
+import { crearApertura, confirmarApertura, obtenerFondoAnterior } from '../../hooks/useTurno'
 import DesgloseDenominaciones, { calcularTotal, DESGLOSE_VACIO } from '../ui/DesgloseDenominaciones'
 import Badge from '../ui/Badge'
 import Spinner from '../ui/Spinner'
@@ -30,12 +30,10 @@ function labelTurno(turno) {
   return turno === 'manana' ? 'Mañana' : 'Tarde'
 }
 
-export default function AperturaForm() {
+export default function AperturaForm({ registro, loading, error, refetch, turnoActual, fechaHoy }) {
   const user = useAuthStore((s) => s.user)
   const perfil = useAuthStore((s) => s.perfil)
   const { addToast } = useToast()
-
-  const { registro, loading, error, refetch, turnoActual, fechaHoy } = useTurno()
 
   // Estado del fondo heredado del turno anterior
   const [fondoInfo, setFondoInfo] = useState(null)

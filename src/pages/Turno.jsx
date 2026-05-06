@@ -35,7 +35,7 @@ function labelTurno(turno) {
 
 export default function Turno() {
   const perfil = useAuthStore((s) => s.perfil)
-  const { turnoActual } = useTurno()
+  const { registro, loading, error, refetch, turnoActual, fechaHoy } = useTurno()
 
   const fechaFormateada = format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })
 
@@ -56,8 +56,8 @@ export default function Turno() {
         </p>
       </div>
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <AperturaForm />
-        <CierreForm />
+        <AperturaForm registro={registro} loading={loading} error={error} refetch={refetch} turnoActual={turnoActual} fechaHoy={fechaHoy} />
+        <CierreForm registro={registro} loading={loading} refetch={refetch} />
       </main>
     </div>
   )

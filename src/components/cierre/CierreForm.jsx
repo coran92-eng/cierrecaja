@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useTurno } from '../../hooks/useTurno'
 import { guardarCierre, obtenerDatafonos } from '../../hooks/useCierre'
 import DesgloseDenominaciones, { calcularTotal, DESGLOSE_VACIO } from '../ui/DesgloseDenominaciones'
 import Semaforo from '../ui/Semaforo'
@@ -125,8 +124,7 @@ function ResumenCierre({ registro, datafonos }) {
   )
 }
 
-export default function CierreForm() {
-  const { registro, refetch } = useTurno()
+export default function CierreForm({ registro, refetch }) {
   const { addToast } = useToast()
 
   const [desglose, setDesglose] = useState({ ...DESGLOSE_VACIO })
