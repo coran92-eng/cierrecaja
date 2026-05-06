@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
@@ -39,6 +40,19 @@ export default function Turno() {
 
   const fechaFormateada = format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })
 
+  const canApertura = !registro || registro.estado === 'cerrado'
+  const canCierre = registro && (registro.estado === 'apertura_ok' || registro.estado === 'reabierto')
+
+  const [vistaActiva, setVistaActiva] = useState(null)
+
+  // Inicializar y actualizar vistaActiva cuando cambia el estado del registro
+  useEffect(() => {
+    if (!loading) {
+      if (canCierre) setVistaActiva('cierre')
+      else if (canApertura) setVistaActiva('apertura')
+    }
+  }, [registro?.estado, loading])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -56,8 +70,63 @@ export default function Turno() {
         </p>
       </div>
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <AperturaForm registro={registro} loading={loading} error={error} refetch={refetch} turnoActual={turnoActual} fechaHoy={fechaHoy} />
-        <CierreForm registro={registro} loading={loading} refetch={refetch} />
+        {/* Selector de vista: dos cards grandes lado a lado */}
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => canApertura && setVistaActiva('apertura')}
+            disabled={!canApertura}
+            className={`p-6 rounded-xl border-2 text-left transition-all ${
+              canApertura
+                ? vistaActiva === 'apertura'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white hover:border-blue-300 text-gray-700'
+                : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            <div className="text-2xl mb-2">🔓</div>
+            <div className="font-semibold">Apertura de turno</div>
+            <div className="text-sm mt-1 opacity-70">
+              {canApertura ? 'Disponible' : 'Turno en curso'}
+            </div>
+          </button>
+
+          <button
+            onClick={() => canCierre && setVistaActiva('cierre')}
+            disabled={!canCierre}
+            className={`p-6 rounded-xl border-2 text-left transition-all ${
+              canCierre
+                ? vistaActiva === 'cierre'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-white hover:border-blue-300 text-gray-700'
+                : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            <div className="text-2xl mb-2">🔒</div>
+            <div className="font-semibold">Cierre de turno</div>
+            <div className="text-sm mt-1 opacity-70">
+              {canCierre ? 'Turno abierto' : 'Sin turno activo'}
+            </div>
+          </button>
+        </div>
+
+        {/* Formulario activo */}
+        {vistaActiva === 'apertura' && canApertura && (
+          <AperturaForm
+            registro={registro}
+            loading={loading}
+            error={error}
+            refetch={refetch}
+            turnoActual={turnoActual}
+            fechaHoy={fechaHoy}
+          />
+        )}
+        {vistaActiva === 'cierre' && canCierre && (
+          <CierreForm
+            registro={registro}
+            loading={loading}
+            refetch={refetch}
+          />
+        )}
       </main>
     </div>
   )
