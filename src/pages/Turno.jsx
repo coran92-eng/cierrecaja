@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { format, addDays, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
@@ -36,12 +36,31 @@ function labelTurno(turno) {
 
 export default function Turno() {
   const perfil = useAuthStore((s) => s.perfil)
-  const { registro, loading, error, refetch, turnoActual, fechaHoy } = useTurno()
+  const { registro, loading, error, refetch } = useTurno()
 
   const fechaFormateada = format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })
 
+  // El turno activo ES el último registro si está en marcha.
+  // Si está cerrado (o no hay ninguno), hay que calcular el siguiente.
   const canApertura = !registro || registro.estado === 'cerrado'
-  const canCierre = registro && (registro.estado === 'apertura_ok' || registro.estado === 'reabierto')
+  const canCierre = !!registro && ['apertura_ok', 'reabierto'].includes(registro.estado)
+
+  // Calcular el turno/fecha del NUEVO turno a crear cuando canApertura=true
+  let nuevoTurno = 'manana'
+  let nuevaFecha = format(new Date(), 'yyyy-MM-dd')
+
+  if (registro?.estado === 'cerrado') {
+    if (registro.turno === 'manana') {
+      nuevoTurno = 'tarde'
+      nuevaFecha = registro.fecha
+    } else {
+      nuevoTurno = 'manana'
+      nuevaFecha = format(addDays(parseISO(registro.fecha), 1), 'yyyy-MM-dd')
+    }
+  }
+
+  // Para mostrar el turno activo en el header
+  const turnoMostrado = canCierre ? registro.turno : nuevoTurno
 
   const [vistaActiva, setVistaActiva] = useState(null)
 
@@ -66,7 +85,7 @@ export default function Turno() {
       </header>
       <div className="bg-white border-b border-gray-100 px-6 py-2">
         <p className="text-sm text-gray-500 capitalize">
-          Turno {labelTurno(turnoActual)} — {fechaFormateada}
+          Turno {labelTurno(turnoMostrado)} — {fechaFormateada}
         </p>
       </div>
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -116,8 +135,8 @@ export default function Turno() {
             loading={loading}
             error={error}
             refetch={refetch}
-            turnoActual={turnoActual}
-            fechaHoy={fechaHoy}
+            turnoActual={nuevoTurno}
+            fechaHoy={nuevaFecha}
           />
         )}
         {vistaActiva === 'cierre' && canCierre && (

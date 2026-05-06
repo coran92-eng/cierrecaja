@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { format, addDays, parseISO } from 'date-fns'
 import { supabase } from '../lib/supabase'
 
@@ -88,90 +88,37 @@ export async function obtenerFondoAnterior(turnoActual, fechaHoy) {
   }
 }
 
-// Hook principal: gestiona el registro del turno activo.
-// El turno activo se determina a partir del último registro en la BD:
-//   - Sin registros → primer turno: manana, fecha hoy
-//   - Último cerrado + turno manana → siguiente: tarde, misma fecha
-//   - Último cerrado + turno tarde  → siguiente: manana, día siguiente
-//   - Último en otro estado (apertura_ok, pendiente, reabierto) → ese mismo registro es el activo
+// Hook principal: devuelve el último registro de la BD.
+// El componente es quien decide qué mostrar según el estado del registro.
 export function useTurno() {
   const [registro, setRegistro] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [turnoActual, setTurnoActual] = useState(null)
-  const [fechaHoy, setFechaHoy] = useState(null)
 
-  const fetchRegistro = useCallback(async () => {
+  const fetchTurno = async () => {
     setLoading(true)
-    setError(null)
     try {
-      // 1. Buscar el último registro (cualquier turno, cualquier fecha)
-      const { data: ultimoRegistro, error: errorUltimo } = await supabase
+      // Simplemente devuelve el último registro existente
+      const { data, error } = await supabase
         .from('turnos_registros')
         .select('*')
         .order('fecha', { ascending: false })
-        .order('turno', { ascending: false }) // 'tarde' > 'manana' alfabéticamente
+        .order('turno', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      if (errorUltimo) throw errorUltimo
-
-      // 2. Determinar el turno/fecha activo basado en el último registro
-      let turno, fecha
-
-      if (!ultimoRegistro) {
-        // Sin historial → primer turno
-        turno = 'manana'
-        fecha = format(new Date(), 'yyyy-MM-dd')
-      } else if (ultimoRegistro.estado === 'cerrado') {
-        // Último cerrado → calcular el siguiente turno
-        if (ultimoRegistro.turno === 'manana') {
-          turno = 'tarde'
-          fecha = ultimoRegistro.fecha // mismo día
-        } else {
-          // turno === 'tarde' → siguiente es manana del día siguiente
-          turno = 'manana'
-          fecha = format(addDays(parseISO(ultimoRegistro.fecha), 1), 'yyyy-MM-dd')
-        }
-      } else {
-        // apertura_ok, pendiente, reabierto → el turno activo ES ese registro
-        turno = ultimoRegistro.turno
-        fecha = ultimoRegistro.fecha
-      }
-
-      setTurnoActual(turno)
-      setFechaHoy(fecha)
-
-      // 3. Buscar el registro para ese turno/fecha activo
-      const { data, error: supabaseError } = await supabase
-        .from('turnos_registros')
-        .select('*')
-        .eq('turno', turno)
-        .eq('fecha', fecha)
-        .maybeSingle()
-
-      if (supabaseError) throw supabaseError
-      setRegistro(data ?? null)
+      if (error) throw error
+      setRegistro(data)  // null si no hay ninguno
     } catch (err) {
-      console.error('useTurno: error al cargar registro', err)
-      setError(err)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [])
-
-  useEffect(() => {
-    fetchRegistro()
-  }, [fetchRegistro])
-
-  return {
-    registro,
-    loading,
-    error,
-    refetch: fetchRegistro,
-    turnoActual,
-    fechaHoy,
   }
+
+  useEffect(() => { fetchTurno() }, [])
+
+  return { registro, loading, error, refetch: fetchTurno }
 }
 
 export default useTurno
