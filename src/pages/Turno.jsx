@@ -1,5 +1,6 @@
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useTurno } from '../hooks/useTurno'
 import AperturaForm from '../components/apertura/AperturaForm'
@@ -7,10 +8,12 @@ import CierreForm from '../components/cierre/CierreForm'
 
 function LogoutButton() {
   const signOut = useAuthStore((s) => s.signOut)
+  const navigate = useNavigate()
 
   async function handleSignOut() {
     try {
       await signOut()
+      navigate('/login')
     } catch (err) {
       console.error('Error al cerrar sesion:', err)
     }
