@@ -7,6 +7,7 @@ import DesgloseDenominaciones, { calcularTotal, DESGLOSE_VACIO } from '../ui/Des
 import Badge from '../ui/Badge'
 import Spinner from '../ui/Spinner'
 import { useToast } from '../ui/Toast'
+import ModalConfirmar from '../ui/ModalConfirmar'
 
 function formatEuros(valor) {
   return Number(valor ?? 0).toLocaleString('es-ES', {
@@ -47,6 +48,7 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
   const [iniciando, setIniciando] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
   const [opError, setOpError] = useState(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
   // Cargar fondo anterior al montar
   useEffect(() => {
@@ -100,8 +102,17 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
     }
   }
 
-  async function handleConfirmarApertura() {
+  function handleClickConfirmar() {
+    if (diferencia !== 0) {
+      setModalOpen(true)
+    } else {
+      ejecutarConfirmarApertura()
+    }
+  }
+
+  async function ejecutarConfirmarApertura() {
     if (!registro) return
+    setModalOpen(false)
     setConfirmando(true)
     setOpError(null)
     try {
@@ -110,13 +121,13 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
         : (registro.apertura_fondo_heredado ?? 0)
 
       const totalContado = calcularTotal(desglose)
-      const diferencia = Math.round((totalContado - fondo) * 100) / 100
+      const dif = Math.round((totalContado - fondo) * 100) / 100
 
       await confirmarApertura({
         id: registro.id,
         desglose,
         totalContado,
-        diferencia,
+        diferencia: dif,
       })
       await refetch()
       addToast({ message: 'Apertura confirmada', type: 'success' })
@@ -279,7 +290,7 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
 
           {/* Boton confirmar */}
           <button
-            onClick={handleConfirmarApertura}
+            onClick={handleClickConfirmar}
             disabled={confirmarDeshabilitado}
             className="w-full inline-flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
           >
@@ -346,6 +357,19 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
           )}
         </div>
       )}
+
+      <ModalConfirmar
+        open={modalOpen}
+        titulo="Diferencia en el conteo"
+        warnings={[
+          diferencia > 0
+            ? `Sobran ${formatEuros(diferencia)} respecto al fondo heredado.`
+            : `Faltan ${formatEuros(Math.abs(diferencia))} respecto al fondo heredado.`
+        ]}
+        confirmando={confirmando}
+        onCancel={() => setModalOpen(false)}
+        onConfirm={ejecutarConfirmarApertura}
+      />
     </div>
   )
 }

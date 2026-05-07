@@ -9,6 +9,7 @@ import Badge from '../ui/Badge'
 import Spinner from '../ui/Spinner'
 import DatafonoPanel from './DatafonoPanel'
 import { useToast } from '../ui/Toast'
+import ModalConfirmar from '../ui/ModalConfirmar'
 
 const schema = z.object({
   fondoDefinido: z.number({ required_error: 'Requerido' }).min(0),
@@ -132,6 +133,8 @@ export default function CierreForm({ registro, refetch }) {
   const [guardando, setGuardando] = useState(false)
   const [opError, setOpError] = useState(null)
   const [datafonosCargados, setDatafonosCargados] = useState([])
+  const [modalOpen, setModalOpen] = useState(false)
+  const [pendingData, setPendingData] = useState(null)
 
   const {
     register,
@@ -191,8 +194,8 @@ export default function CierreForm({ registro, refetch }) {
     datafonos,
   })
 
-  async function onSubmit(formData) {
-    if (desgloseVacio) return
+  async function ejecutarGuardarCierre(formData) {
+    setModalOpen(false)
     setGuardando(true)
     setOpError(null)
     try {
@@ -216,6 +219,17 @@ export default function CierreForm({ registro, refetch }) {
       addToast({ message: err.message || 'Error al guardar cierre', type: 'error' })
     } finally {
       setGuardando(false)
+    }
+  }
+
+  function onSubmit(formData) {
+    if (desgloseVacio) return
+    const hayDiferencias = difEfectivo !== 0 || difTarjeta !== 0
+    if (hayDiferencias) {
+      setPendingData(formData)
+      setModalOpen(true)
+    } else {
+      ejecutarGuardarCierre(formData)
     }
   }
 
@@ -404,6 +418,28 @@ export default function CierreForm({ registro, refetch }) {
           </p>
         )}
       </form>
+
+      {(() => {
+        const warnings = []
+        if (difEfectivo !== 0)
+          warnings.push(difEfectivo > 0
+            ? `Sobran ${formatEuros(difEfectivo)} en efectivo.`
+            : `Faltan ${formatEuros(Math.abs(difEfectivo))} en efectivo.`)
+        if (difTarjeta !== 0)
+          warnings.push(difTarjeta > 0
+            ? `Sobran ${formatEuros(difTarjeta)} en tarjeta (datáfonos vs TPV).`
+            : `Faltan ${formatEuros(Math.abs(difTarjeta))} en tarjeta (datáfonos vs TPV).`)
+        return (
+          <ModalConfirmar
+            open={modalOpen}
+            titulo="Diferencias en el cierre"
+            warnings={warnings}
+            confirmando={guardando}
+            onCancel={() => { setModalOpen(false); setPendingData(null) }}
+            onConfirm={() => ejecutarGuardarCierre(pendingData)}
+          />
+        )
+      })()}
     </div>
   )
 }
