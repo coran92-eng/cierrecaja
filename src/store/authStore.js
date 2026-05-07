@@ -13,21 +13,6 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout])
 }
 
-async function loadPerfil(userId) {
-  const { data, error } = await supabase
-    .from('perfiles')
-    .select('*')
-    .eq('id', userId)
-    .single()
-
-  if (error) {
-    console.error('Error cargando perfil:', error)
-    return null
-  }
-
-  return data
-}
-
 export const useAuthStore = create((set, get) => ({
   user: null,
   perfil: null,
@@ -35,11 +20,9 @@ export const useAuthStore = create((set, get) => ({
 
   signIn: async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
     if (error) throw error
-
-    const perfil = await loadPerfil(data.user.id)
-    set({ user: data.user, perfil })
+    set({ user: data.user })
+    await get().loadPerfil(data.user.id)
   },
 
   signOut: async () => {
