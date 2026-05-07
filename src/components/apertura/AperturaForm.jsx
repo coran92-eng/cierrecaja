@@ -27,12 +27,11 @@ function formatFecha(fechaStr) {
 }
 
 function labelTurno(turno) {
-  return turno === 'manana' ? 'Mañana' : 'Tarde'
+  return turno === 'manana' ? 'Turno 1' : 'Turno 2'
 }
 
-export default function AperturaForm({ registro, loading, error, refetch, turnoActual, fechaHoy }) {
+export default function AperturaForm({ registro, loading, error, refetch, turnoActual, fechaHoy, nombreEmpleado }) {
   const user = useAuthStore((s) => s.user)
-  const perfil = useAuthStore((s) => s.perfil)
   const { addToast } = useToast()
 
   // Estado del fondo heredado del turno anterior
@@ -79,7 +78,7 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
   // ---- Handlers ----
 
   async function handleIniciarApertura() {
-    if (!user || !perfil) return
+    if (!user) return
     setIniciando(true)
     setOpError(null)
     try {
@@ -88,7 +87,7 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
         turnoNombre: turnoActual,
         fecha: fechaHoy,
         empleadoId: user.id,
-        empleadoNombre: perfil?.nombre ?? user.email,
+        empleadoNombre: nombreEmpleado || user.email,
         fondoHeredado: fondoInfo?.fondo ?? null,
         fondoEditable: esEditable,
       })
