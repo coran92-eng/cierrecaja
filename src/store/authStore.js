@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase'
 
 const TIMEOUT_MS = 10000
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
 function withTimeout(promise, ms) {
   const timeout = new Promise((_, reject) =>
     setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
@@ -46,27 +49,22 @@ export const useAuthStore = create((set, get) => ({
 
   loadPerfil: async (userId) => {
     try {
-      console.log('[loadPerfil] querying for userId:', userId)
-      const { data, error, status, statusText } = await supabase
-        .from('perfiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle()   // maybeSingle no lanza error si no hay filas
-
-      console.log('[loadPerfil] result:', { data, error, status, statusText })
-
-      if (error) {
-        console.error('[loadPerfil] error:', error.message, error.code, error.details)
-        return
+      const url = `${SUPABASE_URL}/rest/v1/perfiles?id=eq.${userId}&select=*`
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        }
+      })
+      const data = await res.json()
+      console.log('[loadPerfil] raw fetch result:', data)
+      if (Array.isArray(data) && data.length > 0) {
+        set({ perfil: data[0] })
+      } else {
+        console.warn('[loadPerfil] no perfil found for:', userId)
       }
-      if (!data) {
-        console.warn('[loadPerfil] no perfil found for userId:', userId)
-        return
-      }
-      set({ perfil: data })
-      console.log('[loadPerfil] perfil set:', data)
     } catch (err) {
-      console.error('[loadPerfil] catch:', err)
+      console.error('[loadPerfil] error:', err)
     }
   },
 
