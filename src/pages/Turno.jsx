@@ -65,9 +65,18 @@ export default function Turno() {
 
   // Inicializar y actualizar vistaActiva cuando cambia el estado del registro
   useEffect(() => {
-    if (!loading) {
-      if (canCierre) setVistaActiva('cierre')
-      else if (canApertura) setVistaActiva('apertura')
+    if (loading) return
+    if (registro?.estado === 'apertura_ok' || registro?.estado === 'reabierto') {
+      setVistaActiva('cierre')
+    } else if (registro?.estado === 'cerrado') {
+      setTurnoElegido(null)
+      setNombreEmpleado('')
+      setSeleccionConfirmada(false)
+      setVistaActiva('apertura')
+    } else if (canCierre) {
+      setVistaActiva('cierre')
+    } else if (canApertura) {
+      setVistaActiva('apertura')
     }
   }, [registro?.estado, loading])
 
@@ -84,14 +93,7 @@ export default function Turno() {
     setSeleccionConfirmada(false)
   }
 
-  // Limpiar para el siguiente turno cuando el registro pasa a 'cerrado'
-  useEffect(() => {
-    if (registro?.estado === 'cerrado') {
-      setTurnoElegido(null)
-      setSeleccionConfirmada(false)
-      setNombreEmpleado('')
-    }
-  }, [registro?.estado])
+  // (limpieza de 'cerrado' gestionada en el useEffect principal de vistaActiva)
 
   // El turno y nombre efectivos para pasar al AperturaForm:
   // - Si hay apertura pendiente → usar datos del registro
@@ -214,7 +216,12 @@ export default function Turno() {
 
             {/* Botón confirmar */}
             <button
-              onClick={() => setSeleccionConfirmada(true)}
+              onClick={() => {
+                setSeleccionConfirmada(true)
+                if (registro?.estado === 'apertura_ok' || registro?.estado === 'reabierto') {
+                  setVistaActiva('cierre')
+                }
+              }}
               disabled={!turnoElegido || nombreEmpleado.trim() === ''}
               className="w-full inline-flex justify-center items-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
             >
@@ -226,34 +233,51 @@ export default function Turno() {
         {/* Formulario de apertura */}
         {mostrarFormApertura && (
           <div className="space-y-3">
-            {/* Badge de turno y nombre + botón Cambiar */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {labelTurno(turnoParaForm)}
-                </span>
-                {nombreParaForm && (
-                  <span className="text-sm text-gray-600">{nombreParaForm}</span>
-                )}
-              </div>
-              {registro?.estado !== 'apertura_ok' && registro?.estado !== 'cerrado' && registro?.estado !== 'reabierto' && (
+            {vistaActiva === 'apertura' && seleccionConfirmada && registro?.estado === 'apertura_ok' ? (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-green-800 font-medium text-sm">Apertura ya confirmada</p>
+                  <p className="text-green-600 text-xs mt-0.5">{labelTurno(registro.turno)} — {registro.empleado_nombre}</p>
+                </div>
                 <button
-                  onClick={handleCambiarSeleccion}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  onClick={() => setVistaActiva('cierre')}
+                  className="bg-green-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-green-700"
                 >
-                  Cambiar
+                  Ir al cierre →
                 </button>
-              )}
-            </div>
-            <AperturaForm
-              registro={registro}
-              loading={loading}
-              error={error}
-              refetch={refetch}
-              turnoActual={turnoParaForm}
-              fechaHoy={nuevaFecha}
-              nombreEmpleado={nombreParaForm}
-            />
+              </div>
+            ) : (
+              <>
+                {/* Badge de turno y nombre + botón Cambiar */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {labelTurno(turnoParaForm)}
+                    </span>
+                    {nombreParaForm && (
+                      <span className="text-sm text-gray-600">{nombreParaForm}</span>
+                    )}
+                  </div>
+                  {registro?.estado !== 'apertura_ok' && registro?.estado !== 'cerrado' && registro?.estado !== 'reabierto' && (
+                    <button
+                      onClick={handleCambiarSeleccion}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Cambiar
+                    </button>
+                  )}
+                </div>
+                <AperturaForm
+                  registro={registro}
+                  loading={loading}
+                  error={error}
+                  refetch={refetch}
+                  turnoActual={turnoParaForm}
+                  fechaHoy={nuevaFecha}
+                  nombreEmpleado={nombreParaForm}
+                />
+              </>
+            )}
           </div>
         )}
 
