@@ -39,8 +39,8 @@ export default function Turno() {
 
   // El turno activo ES el último registro si está en marcha.
   // Si está cerrado (o no hay ninguno), hay que calcular el siguiente.
-  const canApertura = !registro || registro.estado === 'cerrado' || registro.estado === 'pendiente'
-  const canCierre = !!registro && ['apertura_ok', 'reabierto'].includes(registro.estado)
+  const canApertura = !registro || ['cerrado', 'pendiente'].includes(registro?.estado)
+  const canCierre = !!registro && ['apertura_ok', 'reabierto'].includes(registro?.estado)
 
   // Calcular la fecha del NUEVO turno a crear cuando canApertura=true
   let nuevaFecha = format(new Date(), 'yyyy-MM-dd')
