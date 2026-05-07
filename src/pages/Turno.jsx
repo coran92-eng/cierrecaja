@@ -7,6 +7,7 @@ import { useTurno } from '../hooks/useTurno'
 import AperturaForm from '../components/apertura/AperturaForm'
 import CierreForm from '../components/cierre/CierreForm'
 import { labelTurno } from '../lib/utils'
+import PanelDia from '../components/ui/PanelDia'
 
 function LogoutButton() {
   const signOut = useAuthStore((s) => s.signOut)
@@ -33,7 +34,7 @@ function LogoutButton() {
 
 export default function Turno() {
   const perfil = useAuthStore((s) => s.perfil)
-  const { registro, loading, error, refetch } = useTurno()
+  const { registro, registrosHoy, loading, error, refetch } = useTurno()
 
   const fechaFormateada = format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })
 
@@ -136,6 +137,7 @@ export default function Turno() {
         </p>
       </div>
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <PanelDia registrosHoy={registrosHoy} />
         {/* Selector de vista: dos cards grandes lado a lado */}
         <div className="grid grid-cols-2 gap-4">
           <button

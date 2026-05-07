@@ -88,27 +88,33 @@ export async function obtenerFondoAnterior(turnoActual, fechaHoy) {
   }
 }
 
-// Hook principal: devuelve el último registro de la BD.
-// El componente es quien decide qué mostrar según el estado del registro.
+// Hook principal: devuelve el último registro y los registros del día de hoy.
 export function useTurno() {
   const [registro, setRegistro] = useState(null)
+  const [registrosHoy, setRegistrosHoy] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchTurno = async () => {
     setLoading(true)
     try {
-      // Simplemente devuelve el último registro existente
-      const { data, error } = await supabase
-        .from('turnos_registros')
-        .select('*')
-        .order('fecha', { ascending: false })
-        .order('turno', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (error) throw error
-      setRegistro(data)  // null si no hay ninguno
+      const hoy = format(new Date(), 'yyyy-MM-dd')
+      const [{ data: ultimo, error: e1 }, { data: hoyData, error: e2 }] = await Promise.all([
+        supabase
+          .from('turnos_registros')
+          .select('*')
+          .order('fecha', { ascending: false })
+          .order('turno', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('turnos_registros')
+          .select('turno, estado')
+          .eq('fecha', hoy),
+      ])
+      if (e1) throw e1
+      setRegistro(ultimo)
+      setRegistrosHoy(hoyData ?? [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -118,7 +124,7 @@ export function useTurno() {
 
   useEffect(() => { fetchTurno() }, [])
 
-  return { registro, loading, error, refetch: fetchTurno }
+  return { registro, registrosHoy, loading, error, refetch: fetchTurno }
 }
 
 export default useTurno
