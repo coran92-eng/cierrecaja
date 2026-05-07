@@ -268,7 +268,7 @@ export default function Turno() {
                   )}
                 </div>
                 <AperturaForm
-                  registro={registro}
+                  registro={registro?.estado === 'pendiente' ? registro : null}
                   loading={loading}
                   error={error}
                   refetch={refetch}
