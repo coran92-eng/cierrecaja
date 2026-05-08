@@ -82,6 +82,14 @@ function ResumenCierre({ registro, datafonos }) {
         </div>
       </div>
 
+      <div className="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3">
+        <p className="text-xs font-medium text-indigo-500 uppercase tracking-wide mb-0.5">Sobre</p>
+        <p className="text-sm font-semibold text-indigo-800">
+          La cantidad a introducir en el sobre es de{' '}
+          <span className="text-base">{formatEuros(registro.cierre_efectivo_neto)}</span>
+        </p>
+      </div>
+
       <hr className="border-gray-100" />
 
       <DatafonoPanel value={datafonos} readOnly />
@@ -281,6 +289,16 @@ export default function CierreForm({ registro, refetch }) {
               </p>
             </div>
           </div>
+
+          {!desgloseVacio && efectivoNeto > 0 && (
+            <div className="rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3">
+              <p className="text-xs font-medium text-indigo-500 uppercase tracking-wide mb-0.5">Sobre</p>
+              <p className="text-sm font-semibold text-indigo-800">
+                La cantidad a introducir en el sobre es de{' '}
+                <span className="text-base">{formatEuros(efectivoNeto)}</span>
+              </p>
+            </div>
+          )}
         </section>
 
         <hr className="border-gray-100" />

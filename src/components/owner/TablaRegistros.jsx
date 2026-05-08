@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Badge from '../ui/Badge'
+import ModalDetalle from './ModalDetalle'
 
 function formatEuro(valor) {
   if (valor === null || valor === undefined) return '—'
@@ -91,6 +93,8 @@ function estadoBadge(estado) {
 }
 
 export default function TablaRegistros({ registros = [], onReabrir }) {
+  const [detalleRegistro, setDetalleRegistro] = useState(null)
+
   if (registros.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-10 text-center">
@@ -161,14 +165,22 @@ export default function TablaRegistros({ registros = [], onReabrir }) {
                     {estadoBadge(reg.estado)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {reg.estado === 'cerrado' && (
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => onReabrir(reg)}
-                        className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        onClick={() => setDetalleRegistro(reg)}
+                        className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                       >
-                        Reabrir
+                        Ver detalle
                       </button>
-                    )}
+                      {reg.estado === 'cerrado' && (
+                        <button
+                          onClick={() => onReabrir(reg)}
+                          className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          Reabrir
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )
@@ -176,6 +188,8 @@ export default function TablaRegistros({ registros = [], onReabrir }) {
           </tbody>
         </table>
       </div>
+
+      <ModalDetalle registro={detalleRegistro} onClose={() => setDetalleRegistro(null)} />
     </div>
   )
 }
