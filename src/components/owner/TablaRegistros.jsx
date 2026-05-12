@@ -115,6 +115,8 @@ export default function TablaRegistros({ registros = [], onReabrir }) {
               <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap text-right">Apertura</th>
               <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap text-right">Dif. apertura</th>
               <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap text-right">Efectivo neto</th>
+              <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap text-right">Tarjeta turno</th>
+              <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap text-right">Total turno</th>
               <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap text-right">Dif. efectivo</th>
               <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap text-right">Dif. tarjeta</th>
               <th className="px-4 py-3 font-medium text-gray-600 whitespace-nowrap">Semáforo</th>
@@ -127,6 +129,12 @@ export default function TablaRegistros({ registros = [], onReabrir }) {
               const difEf = celdasDifEfectivo(reg.cierre_dif_efectivo)
               const difTa = celdasDifTarjeta(reg.cierre_dif_tarjeta)
               const colorApertura = textColorDifApertura(reg.apertura_diferencia)
+
+              const tarjetaTurno = reg.cierre_tpv_tarjeta ?? null
+              const totalTurno =
+                reg.cierre_efectivo_neto !== null && tarjetaTurno !== null
+                  ? Math.round((reg.cierre_efectivo_neto + tarjetaTurno) * 100) / 100
+                  : null
 
               return (
                 <tr key={reg.id} className="hover:bg-gray-50 transition-colors">
@@ -151,6 +159,12 @@ export default function TablaRegistros({ registros = [], onReabrir }) {
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap text-gray-700">
                     {formatEuro(reg.cierre_efectivo_neto)}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap text-blue-700 font-medium">
+                    {formatEuro(tarjetaTurno)}
+                  </td>
+                  <td className="px-4 py-3 text-right whitespace-nowrap text-gray-900 font-semibold">
+                    {formatEuro(totalTurno)}
                   </td>
                   <td className={`px-4 py-3 text-right whitespace-nowrap font-medium ${difEf.bg}`}>
                     <span>{difEf.text}</span>

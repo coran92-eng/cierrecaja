@@ -46,6 +46,20 @@ export default function OwnerPanel() {
     return acc
   }, 0)
 
+  const totalEfectivoTurnos = registros.reduce((acc, r) => {
+    if (r.cierre_efectivo_neto !== null && r.cierre_efectivo_neto !== undefined) {
+      return acc + Math.round(r.cierre_efectivo_neto * 100) / 100
+    }
+    return acc
+  }, 0)
+  const totalTarjetaTurnos = registros.reduce((acc, r) => {
+    if (r.cierre_tpv_tarjeta !== null && r.cierre_tpv_tarjeta !== undefined) {
+      return acc + Math.round(r.cierre_tpv_tarjeta * 100) / 100
+    }
+    return acc
+  }, 0)
+  const totalTurnos = Math.round((totalEfectivoTurnos + totalTarjetaTurnos) * 100) / 100
+
   async function handleConfirmarReapertura(motivo) {
     setErrorReapertura(null)
     const { error: err } = await reabrirRegistro({
@@ -105,6 +119,25 @@ export default function OwnerPanel() {
             label="Dif. total tarjeta"
             value={formatEuro(difTotalTarjeta)}
             colorClass={difTotalTarjeta > 0 ? 'text-amber-600' : 'text-gray-900'}
+          />
+        </div>
+
+        {/* Totales recaudados */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            label="Efectivo total (turnos)"
+            value={formatEuro(totalEfectivoTurnos)}
+            colorClass="text-emerald-700"
+          />
+          <StatCard
+            label="Tarjeta total (turnos)"
+            value={formatEuro(totalTarjetaTurnos)}
+            colorClass="text-blue-700"
+          />
+          <StatCard
+            label="Total recaudado"
+            value={formatEuro(totalTurnos)}
+            colorClass="text-gray-900"
           />
         </div>
 
