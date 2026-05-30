@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format, addDays, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
@@ -43,16 +43,11 @@ export default function Turno() {
   const canApertura = !registro || ['cerrado', 'pendiente'].includes(registro?.estado)
   const canCierre = !!registro && ['apertura_ok', 'reabierto'].includes(registro?.estado)
 
-  // Calcular la fecha del NUEVO turno a crear cuando canApertura=true
-  let nuevaFecha = format(new Date(), 'yyyy-MM-dd')
-
-  if (registro?.estado === 'cerrado') {
-    if (registro.turno === 'manana') {
-      nuevaFecha = registro.fecha
-    } else {
-      nuevaFecha = format(addDays(parseISO(registro.fecha), 1), 'yyyy-MM-dd')
-    }
-  }
+  // La nueva apertura siempre se crea con la fecha de HOY.
+  // Si se han saltado turnos anteriores (gaps), simplemente se ignoran:
+  // el bar no operó esos turnos. La regla "no abrir sin turno anterior cerrado"
+  // se sigue verificando en AperturaForm vía obtenerFondoAnterior.
+  const nuevaFecha = format(new Date(), 'yyyy-MM-dd')
 
   // Para mostrar el turno activo en el header
   const turnoMostrado = canCierre ? registro.turno : (registro?.estado === 'pendiente' ? registro.turno : null)

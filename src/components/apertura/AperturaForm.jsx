@@ -96,7 +96,13 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
       await refetch()
     } catch (err) {
       console.error('handleIniciarApertura:', err)
-      setOpError('No se pudo iniciar la apertura. Inténtalo de nuevo.')
+      if (err?.code === '23505') {
+        setOpError('Ya existe una apertura para este turno y fecha. Refresca la página.')
+      } else if (err?.code === '42501') {
+        setOpError('No tienes permisos para iniciar esta apertura. Cierra sesión y vuelve a entrar.')
+      } else {
+        setOpError(err?.message || 'No se pudo iniciar la apertura. Inténtalo de nuevo.')
+      }
     } finally {
       setIniciando(false)
     }
@@ -133,8 +139,16 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
       addToast({ message: 'Apertura confirmada', type: 'success' })
     } catch (err) {
       console.error('handleConfirmarApertura:', err)
-      setOpError('No se pudo confirmar la apertura. Inténtalo de nuevo.')
-      addToast({ message: err.message || 'Error al confirmar', type: 'error' })
+      let mensaje
+      if (err?.code === '23505') {
+        mensaje = 'Ya existe una apertura confirmada para este turno y fecha.'
+      } else if (err?.code === '42501') {
+        mensaje = 'No tienes permisos para confirmar esta apertura.'
+      } else {
+        mensaje = err?.message || 'No se pudo confirmar la apertura. Inténtalo de nuevo.'
+      }
+      setOpError(mensaje)
+      addToast({ message: mensaje, type: 'error' })
     } finally {
       setConfirmando(false)
     }

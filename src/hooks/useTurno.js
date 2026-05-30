@@ -25,7 +25,14 @@ export async function crearApertura({
     .select()
     .single()
 
-  if (error) throw error
+  if (error) {
+    // Propagar code/details para que el componente pueda mapear el mensaje
+    const e = new Error(error.message)
+    e.code = error.code
+    e.details = error.details
+    e.hint = error.hint
+    throw e
+  }
   return data
 }
 
@@ -44,7 +51,13 @@ export async function confirmarApertura({ id, desglose, totalContado, diferencia
     .select()
     .single()
 
-  if (error) throw error
+  if (error) {
+    const e = new Error(error.message)
+    e.code = error.code
+    e.details = error.details
+    e.hint = error.hint
+    throw e
+  }
   return data
 }
 
