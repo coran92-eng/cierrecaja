@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
@@ -42,12 +42,6 @@ export default function Turno() {
   // Si está cerrado (o no hay ninguno), hay que calcular el siguiente.
   const canApertura = !registro || ['cerrado', 'pendiente'].includes(registro?.estado)
   const canCierre = !!registro && ['apertura_ok', 'reabierto'].includes(registro?.estado)
-
-  // La nueva apertura siempre se crea con la fecha de HOY.
-  // Si se han saltado turnos anteriores (gaps), simplemente se ignoran:
-  // el bar no operó esos turnos. La regla "no abrir sin turno anterior cerrado"
-  // se sigue verificando en AperturaForm vía obtenerFondoAnterior.
-  const nuevaFecha = format(new Date(), 'yyyy-MM-dd')
 
   // Para mostrar el turno activo en el header
   const turnoMostrado = canCierre ? registro.turno : (registro?.estado === 'pendiente' ? registro.turno : null)
@@ -96,6 +90,19 @@ export default function Turno() {
   // - Si no → usar lo que eligió el usuario
   const turnoParaForm = registro?.estado === 'pendiente' ? registro.turno : turnoElegido
   const nombreParaForm = registro?.estado === 'pendiente' ? (registro.empleado_nombre ?? nombreEmpleado) : nombreEmpleado
+
+  // Fecha de la NUEVA apertura:
+  // - Si el registro está pendiente, se usa su propia fecha.
+  // - Si el turno elegido ya tiene registro HOY (ya se abrió/cerró hoy),
+  //   la nueva apertura pasa a MAÑANA para no chocar con unique(turno, fecha)
+  //   y avanzar de día tras cerrar el último turno.
+  // - En cualquier otro caso, HOY.
+  const hoy = format(new Date(), 'yyyy-MM-dd')
+  const manana = format(addDays(new Date(), 1), 'yyyy-MM-dd')
+  const turnoOcupadoHoy = turnoParaForm && registrosHoy.some((r) => r.turno === turnoParaForm)
+  const nuevaFecha = registro?.estado === 'pendiente'
+    ? registro.fecha
+    : (turnoOcupadoHoy ? manana : hoy)
 
   // Determinar si hay que mostrar la pantalla de selección
   const mostrarSeleccion =
