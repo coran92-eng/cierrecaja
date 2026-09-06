@@ -8,6 +8,26 @@ function calcularSemaforo(difEfectivo, difTarjeta) {
   return 'rojo'
 }
 
+// Avisa por Telegram tras un cierre. Nunca debe tumbar el guardado del
+// cierre si falla (sin conexión, endpoint no desplegado en local, etc.),
+// por eso va en su propio try/catch y no se propaga el error.
+async function notificarTelegramCierre(payload) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await fetch('/api/notificar-cierre', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch (err) {
+    console.error('No se pudo notificar el cierre a Telegram:', err)
+  }
+}
+
 export async function guardarCierre({
   registroId,
   desglose,
@@ -70,6 +90,20 @@ export async function guardarCierre({
     .insert(filas)
 
   if (insertError) return { error: insertError }
+
+  await notificarTelegramCierre({
+    turno: data.turno,
+    fecha: data.fecha,
+    empleado: data.empleado_nombre,
+    efectivoNeto,
+    tarjeta: tpvTarjeta,
+    total: Math.round((efectivoNeto + tpvTarjeta) * 100) / 100,
+    difEfectivo,
+    difTarjeta,
+    semaforo,
+    numTickets: numTickets ?? null,
+    voids: tpvVoids ?? null,
+  })
 
   return { data }
 }
