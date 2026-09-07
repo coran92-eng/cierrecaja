@@ -14,8 +14,11 @@ function calcularSemaforo(difEfectivo, difTarjeta) {
 async function notificarTelegramCierre(payload) {
   try {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    await fetch('/api/notificar-cierre', {
+    if (!session) {
+      console.warn('notificarTelegramCierre: sin sesión activa, no se envía aviso')
+      return
+    }
+    const res = await fetch('/api/notificar-cierre', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,6 +26,12 @@ async function notificarTelegramCierre(payload) {
       },
       body: JSON.stringify(payload),
     })
+    const json = await res.json().catch(() => null)
+    if (!res.ok) {
+      console.error('notificarTelegramCierre: el servidor rechazó el aviso', res.status, json)
+    } else if (json?.enviado === false) {
+      console.warn('notificarTelegramCierre: el aviso no se envió', json)
+    }
   } catch (err) {
     console.error('No se pudo notificar el cierre a Telegram:', err)
   }

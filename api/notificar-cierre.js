@@ -24,17 +24,26 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
 
-  if (!token || !supabaseUrl || !supabaseAnonKey) {
-    return res.status(401).json({ error: 'No autorizado' })
+  if (!token) {
+    return res.status(401).json({ error: 'No autorizado', motivo: 'sin_token' })
+  }
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('notificar-cierre: faltan VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en el entorno de Vercel')
+    return res.status(500).json({ error: 'Configuración del servidor incompleta', motivo: 'sin_supabase_env' })
   }
 
   try {
     const authRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnonKey },
     })
-    if (!authRes.ok) return res.status(401).json({ error: 'No autorizado' })
-  } catch {
-    return res.status(401).json({ error: 'No autorizado' })
+    if (!authRes.ok) {
+      const detalle = await authRes.text().catch(() => '')
+      console.error('notificar-cierre: token de sesión rechazado por Supabase', authRes.status, detalle)
+      return res.status(401).json({ error: 'No autorizado', motivo: 'token_rechazado' })
+    }
+  } catch (err) {
+    console.error('notificar-cierre: fallo al verificar el token contra Supabase', err.message)
+    return res.status(401).json({ error: 'No autorizado', motivo: 'fallo_verificacion' })
   }
 
   const {
@@ -45,13 +54,15 @@ export default async function handler(req, res) {
   } = req.body ?? {}
 
   if (!turno || !fecha || typeof efectivoNeto !== 'number' || typeof tarjeta !== 'number') {
+    console.error('notificar-cierre: datos de cierre incompletos', { turno, fecha, efectivoNeto, tarjeta })
     return res.status(400).json({ error: 'Datos de cierre incompletos' })
   }
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN
   const chatId = process.env.TELEGRAM_CHAT_ID
   if (!botToken || !chatId) {
-    return res.status(200).json({ ok: true, enviado: false })
+    console.error('notificar-cierre: faltan TELEGRAM_BOT_TOKEN o TELEGRAM_CHAT_ID en el entorno de Vercel')
+    return res.status(200).json({ ok: true, enviado: false, motivo: 'telegram_no_configurado' })
   }
 
   const ETIQUETA_TURNO = { manana: 'Turno 1 (mañana)', tarde: 'Turno 2 (tarde)' }
