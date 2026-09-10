@@ -10,6 +10,7 @@ import Spinner from '../ui/Spinner'
 import DatafonoPanel from './DatafonoPanel'
 import { useToast } from '../ui/Toast'
 import ModalConfirmar from '../ui/ModalConfirmar'
+import { labelTurno, formatFechaLarga } from '../../lib/utils'
 
 const schema = z.object({
   fondoDefinido: z.number({ required_error: 'Requerido' }).min(0),
@@ -179,6 +180,9 @@ export default function CierreForm({ registro, refetch }) {
       <div className="rounded-xl shadow-sm border border-gray-200 bg-white p-6 space-y-5">
         <div>
           <h2 className="text-base font-semibold text-gray-900">Cierre de turno</h2>
+          <p className="text-sm text-gray-500 mt-0.5 capitalize">
+            {labelTurno(registro.turno)} · {formatFechaLarga(registro.fecha)}
+          </p>
         </div>
         <hr className="border-gray-100" />
         <ResumenCierre registro={registro} datafonos={datafonosCargados} />
@@ -249,6 +253,9 @@ export default function CierreForm({ registro, refetch }) {
     <div className="rounded-xl shadow-sm border border-gray-200 bg-white p-6 space-y-5">
       <div>
         <h2 className="text-base font-semibold text-gray-900">Cierre de turno</h2>
+        <p className="text-sm text-gray-500 mt-0.5 capitalize">
+          {labelTurno(registro.turno)} · {formatFechaLarga(registro.fecha)}
+        </p>
       </div>
 
       <hr className="border-gray-100" />

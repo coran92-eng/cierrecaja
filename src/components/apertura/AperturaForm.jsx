@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore'
 import { crearApertura, confirmarApertura, obtenerFondoAnterior } from '../../hooks/useTurno'
 import DesgloseDenominaciones, { calcularTotal, DESGLOSE_VACIO } from '../ui/DesgloseDenominaciones'
@@ -8,27 +6,13 @@ import Badge from '../ui/Badge'
 import Spinner from '../ui/Spinner'
 import { useToast } from '../ui/Toast'
 import ModalConfirmar from '../ui/ModalConfirmar'
+import { labelTurno, formatFechaLarga } from '../../lib/utils'
 
 function formatEuros(valor) {
   return Number(valor ?? 0).toLocaleString('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }) + ' €'
-}
-
-function formatFecha(fechaStr) {
-  try {
-    // fechaStr es 'yyyy-MM-dd'
-    const [anio, mes, dia] = fechaStr.split('-').map(Number)
-    const fecha = new Date(anio, mes - 1, dia)
-    return format(fecha, "EEEE d 'de' MMMM 'de' yyyy", { locale: es })
-  } catch {
-    return fechaStr
-  }
-}
-
-function labelTurno(turno) {
-  return turno === 'manana' ? 'Turno 1' : 'Turno 2'
 }
 
 export default function AperturaForm({ registro, loading, error, refetch, turnoActual, fechaHoy, nombreEmpleado }) {
@@ -97,7 +81,7 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
     } catch (err) {
       console.error('handleIniciarApertura:', err)
       if (err?.code === '23505') {
-        setOpError('Ya existe una apertura para este turno y fecha. Refresca la página.')
+        setOpError('Ya existe un registro para ese turno y esa fecha. Elige otra fecha o revisa el panel del día.')
       } else if (err?.code === '42501') {
         setOpError('No tienes permisos para iniciar esta apertura. Cierra sesión y vuelve a entrar.')
       } else {
@@ -198,7 +182,7 @@ export default function AperturaForm({ registro, loading, error, refetch, turnoA
         <h2 className="text-base font-semibold text-gray-900">
           Apertura — Turno {labelTurno(turnoActual)}
         </h2>
-        <p className="text-sm text-gray-500 mt-0.5 capitalize">{formatFecha(fechaHoy)}</p>
+        <p className="text-sm text-gray-500 mt-0.5 capitalize">{formatFechaLarga(fechaHoy)}</p>
       </div>
 
       <hr className="border-gray-100" />

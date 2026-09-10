@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { format, addDays } from 'date-fns'
+import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
@@ -46,8 +46,9 @@ export default function Turno() {
   // Para mostrar el turno activo en el header
   const turnoMostrado = canCierre ? registro.turno : (registro?.estado === 'pendiente' ? registro.turno : null)
 
-  // Estado de selección de turno y nombre (solo para apertura nueva)
+  // Estado de selección de turno, fecha y nombre (solo para apertura nueva)
   const [turnoElegido, setTurnoElegido] = useState(null)         // 'manana' | 'tarde'
+  const [fechaElegida, setFechaElegida] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [seleccionConfirmada, setSeleccionConfirmada] = useState(false)
   const [nombreEmpleado, setNombreEmpleado] = useState('')
 
@@ -60,6 +61,7 @@ export default function Turno() {
       setVistaActiva('cierre')
     } else if (registro?.estado === 'cerrado') {
       setTurnoElegido(null)
+      setFechaElegida(format(new Date(), 'yyyy-MM-dd'))
       setNombreEmpleado('')
       setSeleccionConfirmada(false)
       setVistaActiva('apertura')
@@ -80,6 +82,7 @@ export default function Turno() {
   // Resetear selección cuando se pulsa "Cambiar"
   function handleCambiarSeleccion() {
     setTurnoElegido(null)
+    setFechaElegida(format(new Date(), 'yyyy-MM-dd'))
     setSeleccionConfirmada(false)
   }
 
@@ -92,17 +95,13 @@ export default function Turno() {
   const nombreParaForm = registro?.estado === 'pendiente' ? (registro.empleado_nombre ?? nombreEmpleado) : nombreEmpleado
 
   // Fecha de la NUEVA apertura:
-  // - Si el registro está pendiente, se usa su propia fecha.
-  // - Si el turno elegido ya tiene registro HOY (ya se abrió/cerró hoy),
-  //   la nueva apertura pasa a MAÑANA para no chocar con unique(turno, fecha)
-  //   y avanzar de día tras cerrar el último turno.
-  // - En cualquier otro caso, HOY.
-  const hoy = format(new Date(), 'yyyy-MM-dd')
-  const manana = format(addDays(new Date(), 1), 'yyyy-MM-dd')
-  const turnoOcupadoHoy = turnoParaForm && registrosHoy.some((r) => r.turno === turnoParaForm)
-  const nuevaFecha = registro?.estado === 'pendiente'
-    ? registro.fecha
-    : (turnoOcupadoHoy ? manana : hoy)
+  // - Si el registro está pendiente, se usa su propia fecha (ya se creó la fila,
+  //   no se puede cambiar retroactivamente).
+  // - Si no, la que el usuario elige explícitamente en el selector de fecha —
+  //   así el propio empleado/owner controla qué día registra en vez de que la
+  //   app lo adivine, que es lo que dejaba turnos "desconfigurados" cuando se
+  //   olvidaba cerrar uno y el siguiente se abría con la fecha equivocada.
+  const nuevaFecha = registro?.estado === 'pendiente' ? registro.fecha : fechaElegida
 
   // Determinar si hay que mostrar la pantalla de selección
   const mostrarSeleccion =
@@ -204,6 +203,23 @@ export default function Turno() {
               ))}
             </div>
 
+            {/* Selector de fecha */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Día del turno
+              </label>
+              <input
+                type="date"
+                value={fechaElegida}
+                max={format(new Date(), 'yyyy-MM-dd')}
+                onChange={(e) => setFechaElegida(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Por defecto es hoy. Cámbialo si estás registrando un turno de un día anterior que se quedó sin cerrar.
+              </p>
+            </div>
+
             {/* Input de nombre */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -226,7 +242,7 @@ export default function Turno() {
                   setVistaActiva('cierre')
                 }
               }}
-              disabled={!turnoElegido || nombreEmpleado.trim() === ''}
+              disabled={!turnoElegido || !fechaElegida || nombreEmpleado.trim() === ''}
               className="w-full inline-flex justify-center items-center bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
             >
               Continuar
