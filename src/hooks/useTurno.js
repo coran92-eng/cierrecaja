@@ -101,7 +101,11 @@ export async function obtenerFondoAnterior(turnoActual, fechaHoy) {
   }
 }
 
-// Hook principal: devuelve el último registro y los registros del día de hoy.
+// Hook principal: devuelve el registro activo y los registros del día de hoy.
+// El registro activo es el último turno SIN cerrar (pendiente / apertura_ok /
+// reabierto); solo si no hay ninguno se usa el último registro, cerrado. Así
+// un turno que quedó a medias sigue visible aunque después se haya cerrado
+// otro turno posterior (p. ej. se hizo la tarde sin haber confirmado la mañana).
 export function useTurno() {
   const [registro, setRegistro] = useState(null)
   const [registrosHoy, setRegistrosHoy] = useState([])
@@ -112,7 +116,15 @@ export function useTurno() {
     setLoading(true)
     try {
       const hoy = format(new Date(), 'yyyy-MM-dd')
-      const [{ data: ultimo, error: e1 }, { data: hoyData, error: e2 }] = await Promise.all([
+      const [{ data: abierto, error: e0 }, { data: ultimo, error: e1 }, { data: hoyData }] = await Promise.all([
+        supabase
+          .from('turnos_registros')
+          .select('*')
+          .neq('estado', 'cerrado')
+          .order('fecha', { ascending: false })
+          .order('turno', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
         supabase
           .from('turnos_registros')
           .select('*')
@@ -125,8 +137,9 @@ export function useTurno() {
           .select('turno, estado')
           .eq('fecha', hoy),
       ])
+      if (e0) throw e0
       if (e1) throw e1
-      setRegistro(ultimo)
+      setRegistro(abierto ?? ultimo)
       setRegistrosHoy(hoyData ?? [])
     } catch (err) {
       setError(err.message)
