@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { useRegistros, reabrirRegistro } from '../hooks/useRegistros'
+import { useRegistros, reabrirRegistro, anularRegistro } from '../hooks/useRegistros'
 import FiltrosBar from '../components/owner/FiltrosBar'
 import TablaRegistros from '../components/owner/TablaRegistros'
 import ModalReapertura from '../components/owner/ModalReapertura'
@@ -27,6 +28,7 @@ export default function OwnerPanel() {
   const [filtros, setFiltros] = useState({})
   const [registroAReabrir, setRegistroAReabrir] = useState(null)
   const [errorReapertura, setErrorReapertura] = useState(null)
+  const [registroAAnular, setRegistroAAnular] = useState(null)
 
   const { registros, loading, error, refetch } = useRegistros(filtros)
 
@@ -78,6 +80,23 @@ export default function OwnerPanel() {
     addToast({ message: 'Registro reabierto', type: 'warning' })
   }
 
+  async function handleConfirmarAnulacion(motivo) {
+    setErrorReapertura(null)
+    const { error: err } = await anularRegistro({
+      registro: registroAAnular,
+      ownerId: user.id,
+      motivo,
+    })
+    if (err) {
+      setRegistroAAnular(null)
+      setErrorReapertura(`No se pudo anular el turno: ${err.message ?? 'error desconocido'}`)
+      return
+    }
+    setRegistroAAnular(null)
+    refetch()
+    addToast({ message: 'Turno anulado', type: 'warning' })
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -89,12 +108,20 @@ export default function OwnerPanel() {
               <p className="text-sm text-gray-500 mt-0.5">Bienvenido, {perfil.nombre}</p>
             )}
           </div>
-          <button
-            onClick={signOut}
-            className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/turno"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+            >
+              Abrir / cerrar turnos
+            </Link>
+            <button
+              onClick={signOut}
+              className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </header>
 
@@ -171,6 +198,10 @@ export default function OwnerPanel() {
                 setErrorReapertura(null)
                 setRegistroAReabrir(reg)
               }}
+              onAnular={(reg) => {
+                setErrorReapertura(null)
+                setRegistroAAnular(reg)
+              }}
             />
           </div>
         )}
@@ -181,6 +212,17 @@ export default function OwnerPanel() {
         registro={registroAReabrir}
         onClose={() => setRegistroAReabrir(null)}
         onConfirm={handleConfirmarReapertura}
+      />
+
+      {/* Modal anular turno */}
+      <ModalReapertura
+        registro={registroAAnular}
+        onClose={() => setRegistroAAnular(null)}
+        onConfirm={handleConfirmarAnulacion}
+        titulo="Anular turno"
+        textoConfirmar="Anular turno"
+        placeholder="Explica por qué se anula este turno... (mínimo 10 caracteres)"
+        aviso="Se eliminará este turno con sus datos de apertura, cierre y datáfonos. Quedará una copia en el registro de administración."
       />
     </div>
   )

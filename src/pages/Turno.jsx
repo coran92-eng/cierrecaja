@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useTurno } from '../hooks/useTurno'
 import AperturaForm from '../components/apertura/AperturaForm'
@@ -130,7 +130,17 @@ export default function Turno() {
             <p className="text-sm text-gray-500 mt-0.5">{perfil.nombre}</p>
           )}
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          {perfil?.rol === 'owner' && (
+            <Link
+              to="/owner"
+              className="text-sm text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+            >
+              ← Panel owner
+            </Link>
+          )}
+          <LogoutButton />
+        </div>
       </header>
       <div className="bg-white border-b border-gray-100 px-6 py-2">
         <p className="text-sm text-gray-500 capitalize">

@@ -92,7 +92,7 @@ function estadoBadge(estado) {
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>
 }
 
-export default function TablaRegistros({ registros = [], onReabrir }) {
+export default function TablaRegistros({ registros = [], onReabrir, onAnular }) {
   const [detalleRegistro, setDetalleRegistro] = useState(null)
 
   if (registros.length === 0) {
@@ -192,6 +192,14 @@ export default function TablaRegistros({ registros = [], onReabrir }) {
                           className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                         >
                           Reabrir
+                        </button>
+                      )}
+                      {onAnular && (
+                        <button
+                          onClick={() => onAnular(reg)}
+                          className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          Anular
                         </button>
                       )}
                     </div>

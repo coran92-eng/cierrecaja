@@ -78,6 +78,45 @@ export async function reabrirRegistro({ registroId, ownerId, motivo }) {
   return { data }
 }
 
+// Elimina un turno guardando antes una copia completa en admin_log.
+// Con RLS, un DELETE sin permiso no da error: devuelve 0 filas. Por eso se
+// comprueba que se haya borrado algo y, si no, se retira la entrada del log.
+export async function anularRegistro({ registro, ownerId, motivo }) {
+  const { data: datafonos } = await supabase
+    .from('datafonos_cierre')
+    .select('*')
+    .eq('registro_id', registro.id)
+
+  const { data: entradaLog, error: logError } = await supabase
+    .from('admin_log')
+    .insert({
+      accion: 'anular_turno',
+      registro_id: registro.id,
+      owner_id: ownerId,
+      motivo,
+      snapshot: { ...registro, datafonos: datafonos ?? [] },
+    })
+    .select('id')
+    .single()
+
+  if (logError) return { error: logError }
+
+  const { data: borrados, error: deleteError } = await supabase
+    .from('turnos_registros')
+    .delete()
+    .eq('id', registro.id)
+    .select('id')
+
+  if (deleteError || !borrados || borrados.length === 0) {
+    await supabase.from('admin_log').delete().eq('id', entradaLog.id)
+    return {
+      error: deleteError ?? new Error('No se pudo eliminar: falta aplicar la migración 002_admin.sql o no tienes rol owner'),
+    }
+  }
+
+  return {}
+}
+
 export async function obtenerReoperturas(registroId) {
   const { data: reaperturas, error } = await supabase
     .from('reaperturas_log')

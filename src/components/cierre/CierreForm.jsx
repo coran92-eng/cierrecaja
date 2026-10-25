@@ -149,6 +149,7 @@ export default function CierreForm({ registro, refetch }) {
     register,
     handleSubmit,
     watch,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
@@ -170,9 +171,27 @@ export default function CierreForm({ registro, refetch }) {
     }
   }, [registro?.id, registro?.estado])
 
-  // No renderizar si no hay registro o no está en estado apertura_ok / cerrado
+  // Cierre reabierto: precargar los datos del cierre anterior para corregirlos
+  useEffect(() => {
+    if (registro?.estado !== 'reabierto' || !registro?.id) return
+    setDesglose(registro.cierre_desglose ?? { ...DESGLOSE_VACIO })
+    reset({
+      fondoDefinido: registro.cierre_fondo_definido ?? undefined,
+      tpvEfectivo: registro.cierre_tpv_efectivo ?? undefined,
+      tpvTarjeta: registro.cierre_tpv_tarjeta ?? undefined,
+      tpvVoids: registro.cierre_tpv_voids ?? undefined,
+      numTickets: registro.cierre_num_tickets ?? undefined,
+    })
+    obtenerDatafonos(registro.id)
+      .then((rows) => {
+        if (rows.length > 0) setDatafonos(rows.map((r) => ({ nombre: r.nombre, importe: r.importe })))
+      })
+      .catch((err) => console.error('CierreForm: error al cargar datáfonos', err))
+  }, [registro?.id, registro?.estado, reset])
+
+  // No renderizar si no hay registro o no está en un estado de cierre
   if (!registro) return null
-  if (!['apertura_ok', 'cerrado'].includes(registro.estado)) return null
+  if (!['apertura_ok', 'reabierto', 'cerrado'].includes(registro.estado)) return null
 
   // Vista readonly si ya está cerrado
   if (registro.estado === 'cerrado') {
@@ -257,6 +276,14 @@ export default function CierreForm({ registro, refetch }) {
           {labelTurno(registro.turno)} · {formatFechaLarga(registro.fecha)}
         </p>
       </div>
+
+      {registro.estado === 'reabierto' && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+          <p className="text-sm text-amber-800">
+            Cierre reabierto. Corrige lo que haga falta y vuelve a confirmar.
+          </p>
+        </div>
+      )}
 
       <hr className="border-gray-100" />
 
