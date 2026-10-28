@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { useRegistros, reabrirRegistro, anularRegistro } from '../hooks/useRegistros'
+import { useRegistros, reabrirRegistro, anularRegistro, cerrarSinDatos } from '../hooks/useRegistros'
 import FiltrosBar from '../components/owner/FiltrosBar'
 import TablaRegistros from '../components/owner/TablaRegistros'
 import ModalReapertura from '../components/owner/ModalReapertura'
@@ -29,6 +29,7 @@ export default function OwnerPanel() {
   const [registroAReabrir, setRegistroAReabrir] = useState(null)
   const [errorReapertura, setErrorReapertura] = useState(null)
   const [registroAAnular, setRegistroAAnular] = useState(null)
+  const [registroACerrar, setRegistroACerrar] = useState(null)
 
   const { registros, loading, error, refetch } = useRegistros(filtros)
 
@@ -95,6 +96,23 @@ export default function OwnerPanel() {
     setRegistroAAnular(null)
     refetch()
     addToast({ message: 'Turno anulado', type: 'warning' })
+  }
+
+  async function handleConfirmarCierreSinDatos(motivo) {
+    setErrorReapertura(null)
+    const { error: err } = await cerrarSinDatos({
+      registro: registroACerrar,
+      ownerId: user.id,
+      motivo,
+    })
+    if (err) {
+      setRegistroACerrar(null)
+      setErrorReapertura(`No se pudo cerrar el turno: ${err.message ?? 'error desconocido'}`)
+      return
+    }
+    setRegistroACerrar(null)
+    refetch()
+    addToast({ message: 'Turno cerrado sin datos', type: 'warning' })
   }
 
   return (
@@ -202,6 +220,10 @@ export default function OwnerPanel() {
                 setErrorReapertura(null)
                 setRegistroAAnular(reg)
               }}
+              onCerrarSinDatos={(reg) => {
+                setErrorReapertura(null)
+                setRegistroACerrar(reg)
+              }}
             />
           </div>
         )}
@@ -212,6 +234,17 @@ export default function OwnerPanel() {
         registro={registroAReabrir}
         onClose={() => setRegistroAReabrir(null)}
         onConfirm={handleConfirmarReapertura}
+      />
+
+      {/* Modal cerrar turno sin datos */}
+      <ModalReapertura
+        registro={registroACerrar}
+        onClose={() => setRegistroACerrar(null)}
+        onConfirm={handleConfirmarCierreSinDatos}
+        titulo="Cerrar turno sin datos"
+        textoConfirmar="Cerrar turno"
+        placeholder="Explica por qué se cierra sin datos... (mínimo 10 caracteres)"
+        aviso="El turno quedará cerrado sin cifras de caja. No se borra nada: podrás completarlas después con Reabrir."
       />
 
       {/* Modal anular turno */}

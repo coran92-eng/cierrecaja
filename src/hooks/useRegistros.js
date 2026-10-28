@@ -117,6 +117,38 @@ export async function anularRegistro({ registro, ownerId, motivo }) {
   return {}
 }
 
+// Cierra un turno que se quedó abierto sin rellenar cifras de caja. No borra nada:
+// el turno queda cerrado con los campos del cierre vacíos y se puede completar
+// después con "Reabrir". Misma comprobación de filas afectadas que anularRegistro.
+export async function cerrarSinDatos({ registro, ownerId, motivo }) {
+  const { data: entradaLog, error: logError } = await supabase
+    .from('admin_log')
+    .insert({
+      accion: 'cierre_administrativo',
+      registro_id: registro.id,
+      owner_id: ownerId,
+      motivo,
+      snapshot: registro,
+    })
+    .select('id')
+    .single()
+
+  if (logError) return { error: logError }
+
+  const { data: actualizados, error: updateError } = await supabase
+    .from('turnos_registros')
+    .update({ estado: 'cerrado', cierre_confirmado_at: new Date().toISOString() })
+    .eq('id', registro.id)
+    .select('id')
+
+  if (updateError || !actualizados || actualizados.length === 0) {
+    await supabase.from('admin_log').delete().eq('id', entradaLog.id)
+    return { error: updateError ?? new Error('No se pudo cerrar el turno') }
+  }
+
+  return {}
+}
+
 export async function obtenerReoperturas(registroId) {
   const { data: reaperturas, error } = await supabase
     .from('reaperturas_log')

@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useTurno } from '../hooks/useTurno'
 import AperturaForm from '../components/apertura/AperturaForm'
 import CierreForm from '../components/cierre/CierreForm'
-import { labelTurno } from '../lib/utils'
+import { labelTurno, formatFechaLarga } from '../lib/utils'
 import PanelDia from '../components/ui/PanelDia'
 
 function LogoutButton() {
@@ -36,7 +35,7 @@ export default function Turno() {
   const perfil = useAuthStore((s) => s.perfil)
   const { registro, registrosHoy, loading, error, refetch } = useTurno()
 
-  const fechaFormateada = format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })
+  const hoy = format(new Date(), 'yyyy-MM-dd')
 
   // El turno activo ES el último registro si está en marcha.
   // Si está cerrado (o no hay ninguno), hay que calcular el siguiente.
@@ -121,6 +120,12 @@ export default function Turno() {
     ? registro.turno
     : (registro?.estado === 'pendiente' ? registro.turno : turnoElegido)
 
+  // La fecha de cabecera es la del turno en marcha (puede no ser hoy si se quedó
+  // sin cerrar); si no hay ninguno, la del turno que se está eligiendo, o hoy.
+  const hayTurnoEnMarcha = canCierre || registro?.estado === 'pendiente'
+  const fechaHeader = hayTurnoEnMarcha ? registro.fecha : (turnoElegido ? fechaElegida : hoy)
+  const turnoAnteriorSinCerrar = hayTurnoEnMarcha && registro.fecha < hoy
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -144,10 +149,19 @@ export default function Turno() {
       </header>
       <div className="bg-white border-b border-gray-100 px-6 py-2">
         <p className="text-sm text-gray-500 capitalize">
-          {turnoHeader ? `${labelTurno(turnoHeader)} — ` : ''}{fechaFormateada}
+          {turnoHeader ? `${labelTurno(turnoHeader)} — ` : ''}{formatFechaLarga(fechaHeader)}
         </p>
       </div>
       <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {turnoAnteriorSinCerrar && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+            <p className="text-sm text-amber-800">
+              Hay un turno de un día anterior sin cerrar ({labelTurno(registro.turno)} ·{' '}
+              <span className="capitalize">{formatFechaLarga(registro.fecha)}</span>). Hasta que se cierre no se puede abrir el
+              de hoy. Si no se puede cerrar, avisa al encargado.
+            </p>
+          </div>
+        )}
         <PanelDia registrosHoy={registrosHoy} />
         {/* Selector de vista: dos cards grandes lado a lado */}
         <div className="grid grid-cols-2 gap-4">

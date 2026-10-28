@@ -92,7 +92,7 @@ function estadoBadge(estado) {
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>
 }
 
-export default function TablaRegistros({ registros = [], onReabrir, onAnular }) {
+export default function TablaRegistros({ registros = [], onReabrir, onAnular, onCerrarSinDatos }) {
   const [detalleRegistro, setDetalleRegistro] = useState(null)
 
   if (registros.length === 0) {
@@ -192,6 +192,14 @@ export default function TablaRegistros({ registros = [], onReabrir, onAnular }) 
                           className="px-3 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                         >
                           Reabrir
+                        </button>
+                      )}
+                      {reg.estado !== 'cerrado' && onCerrarSinDatos && (
+                        <button
+                          onClick={() => onCerrarSinDatos(reg)}
+                          className="px-3 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                        >
+                          Cerrar sin datos
                         </button>
                       )}
                       {onAnular && (
